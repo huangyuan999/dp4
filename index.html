@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Yuan Huang 20194924</title>
+    <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link href="jquery/css/ui-lightness/jquery-ui-1.10.0.custom.css" rel="stylesheet" />  <link href="./capital_game.css" rel="stylesheet" />
+    <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href='http://fonts.googleapis.com/css?family=Condiment'>
+    <style>
+      .ui-autocomplete {
+        max-height: 150px;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      * html .ui-autocomplete {
+        height: 100px;
+      }
+      </style>
+    <script>
+      function keycheck(){
+        if(event.keyCode==13)
+        document.getElementById("pr2__submit").click();
+      }
+    </script>
+
+  </head>
+  <body onkeydown="keycheck();">
+    <!--Your HTML here-->
+
+    <div style="display: block; margin: 0 auto; width: 35%">
+      <h1>Do you know the capital of this country?</h1>
+
+     
+      <iframe
+      id = "myframe"
+      width="600"
+      height="450"
+      frameborder="0" style="border:thick transparent solid"
+      src="https://www.google.com/maps/embed/v1/place?key=AIzaSyAqBpD2eRIkrSu_HRCw-bAowaS-SFXHe8w&q=Beijing&language=en_US&maptype=roadmap" allowfullscreen>
+    </iframe>
+   
+      
+        
+      <table id="mytable" border="0" align="left" rules="rows" width="600px" cellpadding="4px">
+      <tr>
+        <td><b>Country</b></td>
+        <td><b>Capital</b></td>
+        <td><b>Answer</b></td>
+      </tr>
+      <tr>
+        <td id="pr2__question">country</td>
+        <td>
+          <input id="pr2__answer" type="text" name="Your Answer" >
+        </td>
+        <td>
+        <button id="pr2__submit" type="button" onclick="check()/*document.getElementById('pr2__question').innerHTML = pairs[getRndInteger(0, pairs.length)].country;*/">See Answer</button>
+        </td>
+      </tr>
+      <tr>
+        <td>     
+            <input type="radio" id="All" onclick="handleRadioA()">All</input>
+        </td>
+        <td>
+          <input type="radio" id="Correct Only" onclick="handleRadioB()">Correct Only</input>
+        </td>
+        <td>
+          <input type="radio" id="Wrong Only" onclick="handleRadioC()">Wrong Only</input>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <button id='pr3__undo' type='button' onclick="Undo()">Undo</button>
+          <button id='pr3__clear' type='button' onclick="Clean()">Clear</button>
+          <button id='pr3__restart' type='button' onclick="Restart()">Restart</button>
+        </td>
+
+      </tr>
+      </table>
+      </div>
+     
+    <script src="jquery/js/jquery-1.9.0.min.js"></script>
+    <script src="jquery/js/jquery-ui-1.10.0.custom.min.js"></script>
+    <!-- <script src="./country_capital_pairs.js"></script> -->
+    <script src="./capital_game.js"></script>
+
+    <script>
+    pairs = [];
+    $(document).ready(function(){
+    $.ajax({
+        url:"https://cors-anywhere.herokuapp.com/https://cs374.s3.ap-northeast-2.amazonaws.com/country_capital_pairs.csv",
+        dataType: 'text',
+        async:false,
+        success: function(data) {
+            userlist = data.split("\n");
+            for(i=1;i<userlist.length;i++){
+              userary = userlist[i].split(",");
+              pairs.push({'country': userary[0],'capital':userary[1]})
+            }
+            r = getRndInteger(0, pairs.length);
+            changeSrc(pairs[r].country);
+            document.getElementById("pr2__question").innerHTML = pairs[r].country;
+        },
+        error: function(data) {
+            console.log("failed");
+        }
+    });
+    capital = [];
+    capital = pairs.map(function(v){return v.capital;});
+    $( "#pr2__answer" ).autocomplete({
+      source: capital,
+      minLength:2,
+    });
+    
+});
+
+// capital = [];
+// $(document).ready(function(){
+//     console.log(pairs.length)
+//     capital = pairs.map(function(v){return v.capital;});
+//     $( "#pr2__answer" ).autocomplete({
+//       source: capital,
+//       minLength:2,
+//     });
+//   } );
+    </script>
+
+    <script> 
+      // console.log(pairs[2].country);
+      var search = "";
+      var i = 0;
+      var r = 0;
+      var hist = [];
+      var tid = 0;
+      var zoom = '5';
+      var undo = 0;
+
+      document.getElementById("pr3__clear").disabled = true;
+      document.getElementById("pr3__undo").disabled = true;
+
+      function deleteRecord(obj)
+      {
+        var mytd = obj.parentNode.parentNode;
+  //      alert(mytd.cells[0].innerHTML);
+   //     alert(mytd.cells[1].innerHTML);
+
+        var a = mytd.cells[0].innerHTML;
+        for(var i=0;i<hist.length;i++)
+        {
+          if(hist[i].country == mytd.cells[0].innerHTML && hist[i].answer == mytd.cells[1].innerHTML)
+            hist.splice(i,1);
+        }
+
+        if(hist.length == 0){
+          document.getElementById("pr3__clear").disabled = true;
+        }
+
+        if(document.getElementById("All").checked == true)
+          handleRadioA();
+        if(document.getElementById("Correct Only").checked == true)
+          handleRadioB();
+        if(document.getElementById("Wrong Only").checked == true)
+          handleRadioC();
+
+      undo += 1;
+      store();
+      
+      //  alert(mytd.newTd0.innerHTML);
+      }
+
+      function handleRadioA(){
+            document.getElementById("Correct Only").checked = false;
+            document.getElementById("Wrong Only").checked = false; 
+            tableDelete('mytable');
+            tableAdd('mytable',1);
+        }  
+        function handleRadioB(){
+            document.getElementById("All").checked = false;
+            document.getElementById("Wrong Only").checked = false; 
+            tableDelete('mytable');
+            tableAdd('mytable',2);
+        } 
+        function handleRadioC(){
+            document.getElementById("Correct Only").checked = false;
+            document.getElementById("All").checked = false; 
+            tableDelete('mytable');
+            tableAdd('mytable',3);
+        } 
+
+      function tableAdd(obj,mode)
+      {
+
+         if(hist.length == 0)
+         {
+              var newTr = document.getElementById(obj).insertRow();
+              var newTd0 = newTr.insertCell();
+              var newTd1 = newTr.insertCell();
+              var newTd2 = newTr.insertCell();
+
+              newTd1.innerHTML = "No entry to show";
+              return;
+         }
+  
+         if( (hist.lenth != 0) && (mode == 1) )
+         {
+            for(var r = 0;r < hist.length;r++)
+            {
+                 var newTr = document.getElementById(obj).insertRow();
+                 var newTd0 = newTr.insertCell();
+                 var newTd1 = newTr.insertCell();
+                 var newTd2 = newTr.insertCell();
+             //    hist.splice(r,1);
+
+                 newTd0.onmouseover = function(){
+                   search = this.innerText;
+                   this.parentNode.bgColor = "LightGray";
+                   tid = setTimeout( function(){console.log(search);(search);changeBorder(1);} , 1000 );
+                 }
+
+                 newTd0.onmouseout = function(){
+                   this.parentNode.bgColor = "transparent";
+                   clearTimeout(tid);
+                   changeBorder(0);
+                   console.log("leave");
+                 }
+
+                 newTd2.onmouseover = function(){
+                   search = this.innerText;
+                   this.parentNode.bgColor = "LightGray";
+                   tid = setTimeout( function(){console.log(search);zoom = '4';changeSrc(search);changeBorder(2);} , 1000 );
+                 }
+
+                 newTd2.onmouseout = function(){
+                   this.parentNode.bgColor = "transparent";
+                   clearTimeout(tid);
+                   zoom = '5';
+                   changeBorder(0);
+                   console.log("leave");
+                 }
+
+                 newTd0.innerHTML = hist[r].country;
+                 newTd1.innerHTML = hist[r].answer;
+        //       newTd2.innerHTML = hist[r].capital + "<input type='button' value='Delete' onclick='deleteRecord(this)' />";
+
+                 if(hist[r].correct == 1)
+                 {
+                  newTd2.innerHTML = hist[r].capital + "<input type='button' value='Delete' onclick='deleteRecord(this)' />";
+                  newTd0.style.color = 'blue';
+                  newTd1.style.color = 'blue';
+                  newTd2.style.color = 'blue';
+                 }
+
+                 if(hist[r].correct == 0)
+                 {
+                  newTd2.innerHTML = hist[r].capital + "<input type='button' value='Delete' onclick='deleteRecord(this)' />";
+                  newTd0.style.color = 'red';
+                  newTd1.style.color = 'red';
+                  newTd2.style.color = 'red';
+                  newTd1.style.textDecoration="line-through";
+                 }
+
+            }
+
+            return;
+         }
+
+         if( (hist.length != 0) && (mode == 2) )
+         {
+            for(var r = 0;r < hist.length;r++)
+            {
+               if(hist[r].correct == 1)
+               {
+                 var newTr = document.getElementById(obj).insertRow();
+                 var newTd0 = newTr.insertCell();
+                 var newTd1 = newTr.insertCell();
+                 var newTd2 = newTr.insertCell();
+
+                 newTd0.onmouseover = function(){
+                   search = this.innerText;
+                   this.parentNode.bgColor = "LightGray";
+                   tid = setTimeout( function(){console.log(search);(search);changeBorder(1);} , 1000 );
+                 }
+
+                 newTd0.onmouseout = function(){
+                   this.parentNode.bgColor = "transparent";
+                   clearTimeout(tid);
+                   changeBorder(0);
+                   console.log("leave");
+                 }
+
+                 newTd2.onmouseover = function(){
+                   search = this.innerText;
+                   this.parentNode.bgColor = "LightGray";
+                   tid = setTimeout( function(){console.log(search);zoom = '4';changeSrc(search);changeBorder(2);} , 1000 );
+                 }
+
+                 newTd2.onmouseout = function(){
+                   this.parentNode.bgColor = "transparent";
+                   clearTimeout(tid);
+                   zoom = '5';
+                   changeBorder(0);
+                   console.log("leave");
+                 }
+
+                 newTd0.innerHTML = hist[r].country;
+                 newTd1.innerHTML = hist[r].answer;
+                 newTd2.innerHTML = hist[r].capital + "<input type='button' value='Delete' onclick='deleteRecord(this)' />";
+
+                 newTd0.style.color = 'blue';
+                 newTd1.style.color = 'blue';
+                 newTd2.style.color = 'blue';
+
+               }
+            }
+
+            return;
+         }
+
+         if( (hist.length != 0) && (mode == 3) )
+         {
+            for(var r = 0;r < hist.length;r++)
+            {
+               if(hist[r].correct == 0)
+               {
+                 var newTr = document.getElementById(obj).insertRow();
+                 var newTd0 = newTr.insertCell();
+                 var newTd1 = newTr.insertCell();
+                 var newTd2 = newTr.insertCell();
+
+                 newTd0.onmouseover = function(){
+                   search = this.innerText;
+                   this.parentNode.bgColor = "DarkGray";
+                   tid = setTimeout( function(){console.log(search);(search);changeBorder(1);} , 1000 );
+                 }
+
+                 newTd0.onmouseout = function(){
+                   this.parentNode.bgColor = "transparent";
+                   clearTimeout(tid);
+                   changeBorder(0);
+                   console.log("leave");
+                 }
+
+                 newTd2.onmouseover = function(){
+                   search = this.innerText;
+                   this.parentNode.bgColor = "DarkGray";
+                   tid = setTimeout( function(){console.log(search);zoom = '4';changeSrc(search);changeBorder(2);} , 1000 );
+                 }
+
+                 newTd2.onmouseout = function(){
+                   this.parentNode.bgColor = "transparent";
+                   clearTimeout(tid);
+                   zoom = '5';
+                   changeBorder(0);
+                   console.log("leave");
+                 }
+
+                
+                 newTd0.innerHTML = hist[r].country;
+                 newTd1.innerHTML = hist[r].answer;
+                 newTd2.innerHTML = hist[r].capital + "<input type='button' value='Delete' onclick='deleteRecord(this)' />";
+
+                 newTd0.style.color = 'red';
+                 newTd1.style.color = 'red';
+                 newTd2.style.color = 'red';
+                 newTd1.style.textDecoration="line-through";
+               }
+            }
+            return;
+         }
+
+
+      }
+
+      function tableDelete(obj)
+      {
+         var r = document.getElementById(obj).rows.length;
+      //   alert("行数是"+r);
+         while(r>4)
+         {
+           document.getElementById('mytable').deleteRow(r-1);
+           r--;
+         }
+      }
+      
+      function check()
+      {
+        if(i==0)
+          document.getElementById('All').checked = true;
+
+        if(i!=0)
+        {
+
+          var currentRecord = 
+          {
+           country:pairs[r].country,
+           capital:pairs[r].capital,
+           answer:pairs[r].capital,
+           correct:0
+          };
+
+         if(document.getElementById('pr2__answer').value.toLowerCase() != pairs[r].capital.toLowerCase().substring(0,pairs[r].capital.length)){
+          currentRecord.answer = document.getElementById('pr2__answer').value;
+         }
+         else
+          currentRecord.correct = 1;
+
+         
+         hist.push(currentRecord);
+         document.getElementById("pr3__clear").disabled = false;
+         document.getElementById("pr3__undo").disabled = false;
+         undo += 1;
+         store();
+        }
+        
+        document.getElementById('All').checked = true;
+        handleRadioA();
+
+        r = getRndInteger(0, pairs.length);
+        
+       
+        document.getElementById("pr2__question").innerHTML = pairs[r].country;    
+        document.getElementById("pr2__answer").focus();
+        document.getElementById("pr2__answer").value='';
+        changeSrc(pairs[r].country);
+
+        i++;
+      }
+
+      // $(document).ready( function(){ check(); } );
+      </script>
+
+    <!-- <script>
+   
+$( function() {
+  var capital = pairs.map(function(v){return v.capital;});
+    $( "#pr2__answer" ).autocomplete({
+      source: capital,
+      minLength:2,
+    });
+  } );
+
+    </script> -->
+
+    <script>
+        function handleRadioA(){
+            document.getElementById("Correct Only").checked = false;
+            document.getElementById("Wrong Only").checked = false; 
+            tableDelete('mytable');
+            tableAdd('mytable',1);
+        }  
+        function handleRadioB(){
+            document.getElementById("All").checked = false;
+            document.getElementById("Wrong Only").checked = false; 
+            tableDelete('mytable');
+            tableAdd('mytable',2);
+        } 
+        function handleRadioC(){
+            document.getElementById("Correct Only").checked = false;
+            document.getElementById("All").checked = false; 
+            tableDelete('mytable');
+            tableAdd('mytable',3);
+        } 
+
+    
+               
+    </script>
+
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.14.5/firebase-app.js"></script>
+
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+     <script src="https://www.gstatic.com/firebasejs/7.14.5/firebase-firestore.js"></script>
+
+
+<script>
+  // Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: "AIzaSyAxfHryvVvZcOp5PtB205ofUID5lu8waCo",
+    authDomain: "hci-hy-pr3.firebaseapp.com",
+    databaseURL: "https://hci-hy-pr3.firebaseio.com",
+    projectId: "hci-hy-pr3",
+    storageBucket: "hci-hy-pr3.appspot.com",
+    messagingSenderId: "1015832334723",
+    appId: "1:1015832334723:web:66de00afea15017ead66b6"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  
+  var db = firebase.firestore();
+
+  var histRef = db.collection('history');
+  // window.onbeforeunload = function(event) { 
+  //   alert('正在保存');
+  //   histRef.doc('hist').set(hist);
+  //   return confirm("确定退出吗");
+  // }
+  histRef.doc("undo").get().then(function(doc){
+    if(doc.exists){
+      undo = doc.data().position;
+      if(undo > 0){
+        document.getElementById("pr3__clear").disabled = false;
+        document.getElementById("pr3__undo").disabled = false;
+      }
+    }else{
+      var data2 = {position:undo};
+      histRef.doc("undo").set(data2);
+    }
+
+    histRef.doc("hist" + undo.toString()).get().then(function(doc) {
+      if(doc.exists){
+        hist = doc.data().history;
+      }else{
+        var data1 = {history:hist};
+        histRef.doc('hist'+ undo.toString()).set(data1);
+      }
+  
+      document.getElementById("All").checked = true;
+      handleRadioA();
+  });
+  });
+
+  
+
+  function Clean(){
+    document.getElementById("pr3__clear").disabled = true;
+    hist.length = 0;
+    undo += 1;
+    store();
+    handleRadioA();
+  }
+
+
+  function store(){
+    var data1 = {history:hist};
+    histRef.doc('hist'+ undo.toString()).set(data1);
+    var data2 = {position:undo};
+    histRef.doc("undo").set(data2);
+    console.log("update successful");
+  }
+
+
+　function changeSrc(country){
+  document.getElementById("myframe").src = "https://www.google.com/maps/embed/v1/place?key=AIzaSyAqBpD2eRIkrSu_HRCw-bAowaS-SFXHe8w&q=" + country + "&maptype=roadmap&language=en_US&zoom=" + zoom;
+  }
+
+// $(document).ready(function(){
+//   $("table").on("hover","td",function(){
+//     $(this).hover( function(){
+//       search - this.innerHTML;
+//       tid = setTimeout( function(){
+//         console.log(search);
+
+//       },500)
+//     },function(){
+//       clearTimeout(tid);
+//     });
+//   });
+// });
+
+function changeBorder(mode){
+  if(mode == 0){
+    document.getElementById("myframe").style = "border:thick transparent solid";
+  }
+  if(mode == 1){
+    document.getElementById("myframe").style = "border:thick orange solid";
+  }
+  if(mode == 2){
+    document.getElementById("myframe").style = "border:thick black solid";
+  }
+}
+
+
+
+$(document).ready( function(){
+  $("td").hover( function(){
+    // console.log(this.innerHTML);
+    search = this.innerText;
+    tid = setTimeout( function(){
+      console.log(search);
+      changeBorder(1);
+      changeSrc(search);
+    },1000);
+    }, function(){
+      changeBorder(0);
+      clearTimeout(tid);
+  });
+});
+
+
+function Undo(){
+  if(undo > 0){
+    undo -= 1;
+  }
+  if(undo == 0)
+  document.getElementById("pr3__undo").disabled = true;
+  var data2 = {position:undo};
+  histRef.doc("undo").set(data2);
+
+    histRef.doc("hist" + undo.toString()).get().then(function(doc) {
+    hist = doc.data().history;
+    document.getElementById("All").checked = true;
+    handleRadioA();
+  });
+
+}
+
+function Restart(){
+  document.getElementById("pr3__clear").disabled = true;
+  document.getElementById("pr3__undo").disabled = true;
+
+  undo = 0;
+  var data2 = {position:undo};
+  histRef.doc("undo").set(data2);
+
+  hist.length = 0;
+  var data1 = {history:hist};
+  histRef.doc('hist'+ undo.toString()).set(data1);
+  document.getElementById("All").checked = true;
+  handleRadioA();
+
+  r = getRndInteger(0, pairs.length);
+  changeSrc(pairs[r].country);
+  document.getElementById("pr2__question").innerHTML = pairs[r].country;
+
+}
+
+</script>
+
+  </body>
+
+</html>
